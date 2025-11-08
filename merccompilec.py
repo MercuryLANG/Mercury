@@ -16,10 +16,14 @@ def compile_source(source_code: str, module_dir: Path = None) -> str:
 
         if in_multiline_comment:
             if '*+' in stripped_line:
-                after = stripped_line.split('*+', 1)[1]
-                stripped_line = after.strip()
+                after = stripped_line.split('*+', 1)[1].strip()
                 in_multiline_comment = False
+                if after:
+                    stripped_line = after
+                else:
+                    continue
             else:
+                processed_lines.append('# ' + stripped_line)
                 continue
 
         if '+*' in stripped_line:
@@ -28,14 +32,20 @@ def compile_source(source_code: str, module_dir: Path = None) -> str:
                 after = stripped_line.split('*+', 1)[1].strip()
                 stripped_line = (before + ' ' + after).strip()
             else:
-                stripped_line = before
+                if before:
+                    processed_lines.append(before)
                 in_multiline_comment = True
-                if not stripped_line:
-                    continue
+                continue
 
         for tok in ('++', '--', '//'):
             if tok in stripped_line:
-                stripped_line = stripped_line.split(tok, 1)[0].rstrip()
+                parts = stripped_line.split(tok, 1)
+                code_part = parts[0].rstrip()
+                comment_part = parts[1].strip()
+                if code_part:
+                    processed_lines.append('    ' * indent_level + code_part)
+                processed_lines.append('# ' + comment_part)
+                stripped_line = ''
                 break
 
         if not stripped_line:
@@ -112,6 +122,7 @@ def compile_source(source_code: str, module_dir: Path = None) -> str:
 
     return '\n'.join(processed_lines)
 
+
 def read_file(file_path: str) -> str:
     return Path(file_path).read_text()
 
@@ -137,3 +148,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
